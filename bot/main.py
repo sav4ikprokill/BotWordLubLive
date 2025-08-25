@@ -26,7 +26,7 @@ async def command_start_handler(message: Message) -> None:
     """
     This handler receives messages with the /start command.
     """
-    await message.answer("Hello! I'm your aiogram bot. How can I help you?")
+    await message.answer("здорова")
 
 # Main function to run the bot
 async def main() -> None:
