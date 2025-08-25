@@ -1,39 +1,33 @@
 import asyncio
-import logging
-from dotenv import load_dotenv
-from os import getenv
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import List
 
-from aiogram import Bot, Dispatcher
-from aiogram.filters import Command
-from aiogram.types import Message
+app = FastAPI()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
 
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
 
-load_dotenv()
-TOKEN = getenv("BOT_TOKEN") 
-print(TOKEN)
-bot = Bot(token=TOKEN)
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
 
+    async def broadcast(self, data: bytes):
+        for connection in self.active_connections:
+            await connection.send_bytes(data)
 
-# Initialize Dispatcher
-dp = Dispatcher()
+manager = ConnectionManager()
 
-# Command handler for the /start command
-@dp.message(Command("start"))
-async def command_start_handler(message: Message) -> None:
-    """
-    This handler receives messages with the /start command.
-    """
-    await message.answer("здорова")
-
-# Main function to run the bot
-async def main() -> None:
-    # Initialize Bot instance
-    # Start long polling to receive updates
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    # Run the main asynchronous function
-    asyncio.run(main())
+@app.websocket("/ws/audio")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            # Рассылаем аудио данные всем подключённым (конференция)
+            await manager.broadcast(data)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
