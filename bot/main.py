@@ -1,33 +1,28 @@
+from aiogram import Dispatcher
+from config import bot
+from aiogram.filters import CommandStart
+from aiogram.types import Message
+from handlers.calling_service import router as call_router
+import logging
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from typing import List
 
-app = FastAPI()
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
+logging.basicConfig(level=logging.INFO)
+dp = Dispatcher()
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
+# Роутеры добавлять сюда
 
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+dp.include_router(call_router)
 
-    async def broadcast(self, data: bytes):
-        for connection in self.active_connections:
-            await connection.send_bytes(data)
+@dp.message(CommandStart())
+async def start(message: Message):
+    await message.answer("Мы запустились ути какие")
 
-manager = ConnectionManager()
 
-@app.websocket("/ws/audio")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_bytes()
-            # Рассылаем аудио данные всем подключённым (конференция)
-            await manager.broadcast(data)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
+async def main():
+    await dp.start_polling(bot)
+
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
