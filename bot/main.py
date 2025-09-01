@@ -1,5 +1,7 @@
 from aiogram import Dispatcher
 from config import bot
+from aiogram.filters import CommandStart
+from aiogram.types import Message
 from handlers.calling_service import router as call_router
 import logging
 import asyncio
@@ -12,6 +14,9 @@ dp = Dispatcher()
 
 dp.include_router(call_router)
 
+@dp.message(CommandStart())
+async def start(message: Message):
+    await message.answer("Мы запустились ути какие")
 
 
 async def main():
